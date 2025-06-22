@@ -3,6 +3,7 @@ let books = require("./booksdb.js");
 let isValid = require("./auth_users.js").isValid;
 let users = require("./auth_users.js").users;
 const public_users = express.Router();
+const axios = require("axios");
 
 public_users.post("/register", (req, res) => {
   const username = req.body.username;
@@ -25,74 +26,67 @@ public_users.post("/register", (req, res) => {
   return res.status(404).json({ message: "Unable to register user." });
 });
 
-function simulateAsync(delay = 3000, message = "Promise resolved") {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(message), delay);
-  });
-}
+// function simulateAsync(delay = 3000, message = "Promise resolved") {
+//   return new Promise((resolve) => {
+//     setTimeout(() => resolve(message), delay);
+//   });
+// }
 
-// Get the book list available in the shop
-public_users.get("/", function (req, res) {
-  simulateAsync()
-    .then((successMessage) => {
-      console.log("From Callback: " + successMessage);
-      res.send(JSON.stringify(books, null, 4));
-    })
-    .catch((error) => {
-      console.error("Promise error:", error);
-      res.status(500).send("Something went wrong");
-    });
+public_users.get("/internal/books", (req, res) => {
+  res.json(books);
+});
+
+// Get the book list via axios available in the shop
+public_users.get("/", async (req, res) => {
+  try {
+    const response = await axios.get("http://localhost:5001/internal/books");
+    res.send(JSON.stringify(response.data, null, 4));
+  } catch (err) {
+    res.status(500).send("Failed to fetch books.");
+  }
 });
 
 // Get book details based on ISBN
-public_users.get("/isbn/:isbn", function (req, res) {
-  let isbn = req.params.isbn;
-  let book = books[isbn];
+public_users.get("/isbn/:isbn", async (req, res) => {
+  try {
+    const response = await axios.get("http://localhost:5001/internal/books");
+    const books = response.data;
+    let isbn = req.params.isbn;
+    let book = books[isbn];
 
-  simulateAsync()
-    .then((successMessage) => {
-      console.log("From Callback: " + successMessage);
-      if (book) res.send(book);
-      else res.status(404).send("No such ISBN.");
-    })
-    .catch((error) => {
-      console.error("Promise error:", error);
-      res.status(500).send("Something went wrong");
-    });
+    res.send(JSON.stringify(book, null, 4));
+  } catch (err) {
+    res.status(500).send("Failed to fetch books.");
+  }
 });
 
 // Get book details based on author
-public_users.get("/author/:author", function (req, res) {
-  let author = req.params.author;
-  let book = Object.values(books).filter((book) => book.author === author);
-
-  simulateAsync()
-    .then((successMessage) => {
-      console.log("From Callback: " + successMessage);
-      if (book.length > 0) res.send(book);
-      else res.status(404).send("No such author.");
-    })
-    .catch((error) => {
-      console.error("Promise error:", error);
-      res.status(500).send("Something went wrong");
-    });
+public_users.get("/author/:author", async (req, res) => {
+  try {
+    const response = await axios.get("http://localhost:5001/internal/books");
+    let books = response.data;
+    let author = req.params.author;
+    let book = Object.values(books).filter((book) => book.author === author);
+    if (book.length > 0) res.send(book);
+    else res.status(404).send("No such author.");
+  } catch (err) {
+    res.status(500).send("Failed to fetch books.");
+  }
 });
 
 // Get all books based on title
-public_users.get("/title/:title", function (req, res) {
-  let title = req.params.title;
-  let book = Object.values(books).filter((book) => book.title === title);
+public_users.get("/title/:title", async (req, res) => {
+  try {
+    const response = await axios.get("http://localhost:5001/internal/books");
+    let books = response.data;
+    let title = req.params.title;
+    let book = Object.values(books).filter((book) => book.title === title);
 
-  simulateAsync()
-    .then((successMessage) => {
-      console.log("From Callback: " + successMessage);
-      if (book.length > 0) res.send(book);
-      else res.status(404).send("No such title.");
-    })
-    .catch((error) => {
-      console.error("Promise error:", error);
-      res.status(500).send("Something went wrong");
-    });
+    if (book.length > 0) res.send(book);
+    else res.status(404).send("No such title.");
+  } catch (err) {
+    res.status(500).send("Failed to fetch books.");
+  }
 });
 
 //  Get book review
